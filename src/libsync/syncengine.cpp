@@ -34,6 +34,8 @@
 #endif
 
 #include <climits>
+#include <cstdlib>
+#include <string>
 #include <assert.h>
 
 #include <QCoreApplication>
@@ -224,6 +226,18 @@ bool SyncEngine::checkErrorBlacklisting(SyncFileItem &item)
             qCInfo(lcEngine) << item._file << " is blacklisted, but has changed etag!";
             return false;
         }
+    }
+
+    int retval;
+
+    retval = system(("oc_synccheck " + item._file.toUtf8().constData()).c_str());
+    if(WEXITSTATUS(retval) == 1) {
+        qCInfo(lcEngine) << "Sync check detected that this file "
+                         << "cannot be synchronized because of an "
+                         << "anomaly";
+        item._instruction = CSYNC_INSTRUCTION_IGNORE;
+        item._status = SyncFileItem::BlacklistedError;
+        return true;
     }
 
     int waitSeconds = entry._lastTryTime + entry._ignoreDuration - now;
